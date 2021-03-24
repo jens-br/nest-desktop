@@ -28,9 +28,8 @@ COPY ./nginx.conf /etc/nginx/nginx.conf
 
 RUN touch /var/run/nginx.pid && \
   chown -R www-data:www-data /var/run/nginx.pid && \
-  chown -R www-data:www-data /var/cache/nginx
-
-USER www-data
+  chown -R www-data:www-data /var/cache/nginx && \
+  chmod -R 777 /var/cache/nginx 
 
 EXPOSE 8000
 
