@@ -99,7 +99,7 @@
                 :label="label()"
                 :row-height="12"
                 :rows="1"
-                @change="paramChange()"
+                @change="paramChange(state.value)"
                 auto-grow
                 class="my-1"
                 hide-details
@@ -114,7 +114,7 @@
                 :color="state.color"
                 :readonly="state.options.readonly"
                 :label="label()"
-                @change="paramChange()"
+                @change="paramChange(state.value)"
                 class="ma-1"
                 dense
                 hide-details
@@ -124,7 +124,7 @@
 
             <template v-if="state.options.input === 'tickSlider'">
               <v-subheader class="paramLabel" v-text="label()" />
-              <v-tooltip left v-model="state.showResolutionWarning">
+              <v-tooltip left v-model="computeResWarningState">
                 <template v-slot:activator="{ on, attrs }">
                   <v-slider
                     :max="state.options.ticks.length - 1"
@@ -201,7 +201,12 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import { onMounted, reactive, watch } from '@vue/composition-api';
+import {
+  computed,
+  onMounted,
+  reactive,
+  watchEffect,
+} from '@vue/composition-api';
 
 import { ValueGenerator } from '@/core/parameter/valueGenerator';
 
@@ -342,7 +347,10 @@ export default Vue.extend({
         // text field
         changed = state.value !== Number(value);
         state.value = Number(value);
+      } else if (typeof value === 'boolean') {
+        state.value = value;
       }
+
       if (changed) {
         emit('update:value', deserialize(state.value));
       }
@@ -400,7 +408,10 @@ export default Vue.extend({
      */
     const update = () => {
       state.color = props.color;
-      state.value = serialize(props.value);
+
+      if (state.value == undefined) {
+        state.value = serialize(props.value);
+      }
       if (props.param) {
         state.options = props.param['options'];
         state.param = props.param as ModelParameter | Parameter;
@@ -414,29 +425,27 @@ export default Vue.extend({
       }
     };
 
-    /**
-     * (Re-)Checks if the warning about the simulation resolution should be
-     * shown.
-     */
-    function updateResolutionWarningState() {
-      state.showResolutionWarning =
-        state.options.label === 'simulation resolution' && state.value < 1;
-    }
-
     onMounted(() => {
       update();
     });
 
-    watch(
-      () => [props.color, props.options, props.param, props.value],
-      () => {
-        update();
-        updateResolutionWarningState();
-      }
-    );
+    watchEffect(() => [props.color, props.options, props.param, props.value]);
+
+    const computeResWarningState = computed({
+      /* getter and setter required to prevent warning 'Write operation failed:
+       * computed value is readonly.'
+       */
+      get() {
+        return (
+          state.options.label === 'simulation resolution' && state.value < 1
+        );
+      },
+      set() {},
+    });
 
     return {
       backMenu,
+      computeResWarningState,
       generateValues,
       label,
       paramChange,

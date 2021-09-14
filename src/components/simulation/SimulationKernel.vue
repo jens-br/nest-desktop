@@ -2,7 +2,7 @@
   <div class="simulationKernel">
     <v-row class="full-height" no-gutters>
       <v-col>
-        <v-card class="mb-1" flat tile>
+        <v-card class="mb-1" flat tile width="430px">
           <v-btn
             :color="state.color"
             block
@@ -58,13 +58,9 @@
                 input: 'checkbox',
                 label: 'randomize seed',
               }"
-              :value.sync="state.autoRNGSeed"
+              v-bind:value.sync="state.autoRNGSeed"
               class="mx-1"
-              @update:value="
-                state.simulation.kernel.updateConfig({
-                  autoRNGSeed: state.autoRNGSeed,
-                })
-              "
+              @update:value="toggleAutoRngSeed()"
             />
           </v-card-text>
         </v-card>
@@ -105,10 +101,12 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import { reactive, onMounted } from '@vue/composition-api';
+import { reactive, onBeforeUpdate } from '@vue/composition-api';
 
 import { Simulation } from '@/core/simulation/simulation';
 import ParameterEdit from '@/components/parameter/ParameterEdit.vue';
+
+import store from '../../store/index';
 
 export default Vue.extend({
   name: 'SimulationKernel',
@@ -119,27 +117,47 @@ export default Vue.extend({
     simulation: Simulation,
   },
   setup(props) {
+    //const store = useStore;
+
     const state = reactive({
       color: '#9e9e9e',
-      autoRNGSeed: false,
+      autoRNGSeed: store.state.autoRngSeed,
       simulation: props.simulation as Simulation,
     });
 
     /**
-     * Triggers when parameter is changed.
+     * Should be triggered when a parameter has changed. Regenerates the code
+     * and stores the autoRNGSeed state (if it has changed).
      */
     const paramChange = () => {
       state.simulation.project.code.generate();
+      if (state.autoRNGSeed != store.state.autoRngSeed) {
+        store.commit('toggleAutoRngSeed');
+        state.autoRNGSeed = store.state.autoRngSeed;
+      }
     };
 
-    onMounted(() => {
+    onBeforeUpdate(() => {
       state.simulation = props.simulation as Simulation;
-      state.autoRNGSeed = state.simulation.kernel.config.autoRNGSeed;
+      if (state.autoRNGSeed == undefined) {
+        state.autoRNGSeed = store.state.autoRngSeed;
+      }
     });
 
+    /**
+     * Toggles the autoRNGSeed state.
+     */
+    function toggleAutoRngSeed() {
+      state.autoRNGSeed = !state.autoRNGSeed;
+
+      paramChange();
+    }
+
     return {
+      toggleAutoRngSeed,
       paramChange,
       state,
+      props,
     };
   },
 });
