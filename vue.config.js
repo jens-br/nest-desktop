@@ -2,7 +2,9 @@ const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 const { NewLineKind } = require('typescript');
 
 module.exports = {
-  publicPath: process.env.BASE_URL, // '.',
+  publicPath: process.env.NODE_ENV === 'production'
+    ? '/nest_desktop/app/'
+    : ' process.env.NODE_ENV', // '.',
   productionSourceMap: false,
   transpileDependencies: ['vuetify'],
   outputDir: './nest_desktop/app',
